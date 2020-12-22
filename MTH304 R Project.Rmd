@@ -1,0 +1,180 @@
+---
+title: "MTH304 R Project"
+author: "Niruthieka Velalakan 500955329"
+date: "25/11/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Task 1: Simulate distributions
+### Question 1 (4 marks)
+
+Set the seed to be 123. Simulate $U_1,U_2,U_3$ (each with size 10,000) all come from a uniform(0,1) distribution. (a) Calculate $M = \max(U_1,U_2,U_3)$ using the simulated observations, and visualize the first 6 values. (b) Plot M. (c) Estimate (to 3 significant digits) the probability $P (M > 0.75)$ (Hint, use the number of elements in M greater than 0.75 to be divided by the total number of values).
+
+Solution:
+
+```{r}
+set.seed(123)
+sampa = runif(10000, min = 0, max = 1)
+sampb = runif(10000, min = 0, max = 1)
+sampc = runif(10000, min = 0, max = 1)
+combined = cbind(sampa, sampb, sampc)
+dat <- transform(combined, M = pmax(sampa, sampb, sampc))
+hist(dat$M, main = 'Histogram of M', xlab = 'Uniform Distribution')
+# First 6 values of M
+head(dat$M)
+# P(M > 0.75)
+round(sum(as.data.frame(dat$M) > 0.75)/10000, 3)
+```
+
+### Question 2 (4 marks)
+
+Set the seed to be 123. Simulate 3,000 points from a mixture of two normal distributions. Normal distribution 1 is the standard normal. Normal distribution 2 has mean 1 and the variance twice the size of the distribution 1. Moreover, sample 1 from distribution 1 should be twice the size of sample 2 from distribution 2. Plot the histogram of sample 1 (from distribution 1), sample 2 (from distribution 2), and the combined sample (from the mixture) on the same axes.
+
+Solution:
+
+```{r}
+set.seed(123)
+sampa = rnorm(2000, mean = 0, sd = 1)
+sampb = rnorm(1000, mean = 1, sd = sqrt(2))
+c1 <- rgb(0, 0, 0, max = 225, alpha = 125)
+c2 <- rgb(225, 225, 225, max = 255, alpha = 125)
+c3 <- rgb(225, 0, 0, max = 255, alpha = 125)
+combined = c(sampa, sampb)
+hist(combined, col = c1, main = 'Histogram of all three graphs', xlab = 'Normal Distribution', xlim = c(-4, 6), 
+     ylim = c (0, 550))
+hist(sampa, col = c2, add = TRUE)
+hist(sampb, col = c3, add = TRUE)
+legend('topright', cex = 0.9, c('Combined', 'Sample 1', 'Sample 2'), col = c(c1, c2, c3), title = 'Sample Types', lwd = 5)
+```
+
+
+
+## Task 2: Beta-Binomial distribution--simple Beyasian inference and Monto carlo simulation
+### Question 1 (8 marks)
+
+Set the seed to be 123. Conduct the same analysis as I have done using the sample size $n=100$ and real value $\theta = 0.4$ for Binomial data $y$. (a) Calculate mle $\hat{\theta} = \bar{y}$. Calculate $a_n, b_n$, and the expected value of $\theta$ using $a_n / (a_n + b_n)$. Is the mle or the expected value close to 0.4?  (b) Plot and describe the behaviour of the prior and posterior distribution using base graphics or ggplot2. Add a line to the plot indicating the position of the mle $\hat{\theta}$. (c) Comparing the mle with sample size 100, and the mle with sample size 20, which mle is closer to the real value $\theta = 0.4$? (d) Calculate the probability $P(\theta > 0.45)$. Find a 99% lower and upper bound for $\theta$ using qbeta.
+
+Solution:
+
+First we can find the binomial distribution of y with a sample size $n = 100$ and $\theta = P(Y=1) = 0.4$. First set the seed to be 123.
+
+```{r}
+set.seed(123)
+n <- 100
+theta <- 0.4
+y <- rbinom(n, size = 1, prob = theta)
+print(y)
+```
+
+We can calculate the maximum likelihood estimate since we know that $\hat{\theta} = \bar{y}$.
+
+```{r}
+yhat <- mean(y)
+yhat # Can expect to be close to 0.4
+```
+The maximum likelihood estimate $\hat{\theta} = \bar{y}$ is equal to 0.4.
+
+We can assume that $\theta$ follows a Beta distribution, since we are solving from a Bayesian perspective. Thus, it is not difficult to make the posterior parameters $a_n$ and $b_n$ of a Beta distribution $Beta(a_n,b_n)$. So here we can assume that $a_n = b_n = 1$.
+
+```{r}
+a_0 <- b_0 <- 1
+a_n <- sum(y) + a_0
+b_n <- n - sum(y) + b_0
+a_n
+b_n
+a_n / (a_n + b_n) # Can also expect to be close to 0.4 (Expected value of theta)
+```
+So $a_n = 41$ and $b_n = 61$ and the expected value of $\theta$ from $a_n/(a_n+b_n) = 0.4019608$. From this we can see that both the maximum likelihood estimate and the expected value are close to 0.4, but the maximum likelihood estimate is exactly 0.4. 
+
+To visualize the density of the posterior distribution $p(\theta|y)$, we can use dbeta to create a base graphics. We can plot the posterior and look for similarities and differences between it with the prior. To help with our comparison, we can add a line to the plot to represent the true value of $\theta$. Also, to help distinguish the different curves and lines on the plot, we will add corresponding labels and colours. 
+
+```{r}
+x <- seq(0, 1, length.out= 100)
+f_y1 <- dbeta(x, shape1 = a_0, shape2 = b_0)
+f_y2 <- dbeta(x, shape1 = a_n, shape2 = b_n)
+# Beta density curve
+plot(x, f_y1, ylim = range(f_y1, f_y2), type = "l", main ="Posterior and Prior Comparison", sub = "Simulated Data Result", ylab = "Probability Density", xlab = expression(theta))
+lines(x, f_y2, lwd = 2, col = 2)
+abline(v = theta, col = 3)
+text(c(0.8, 0.24, 0.41), c(1.3, 3.5, 2), labels = c("p(theta)", "p(theta | y)", "true value"), col = 1:3) 
+```
+
+From the plot we can see that the $p(\theta|y)$ curve is a smooth curve with a peak at the maximum likelihood estimation $\theta = 0.4$. 
+
+Next we can compare the maximum likelihood estimation with a sample size 100 and a sample size 20 to see which is closer to the real value $\theta = 0.4$.
+
+```{r}
+set.seed(123)
+n_1 <- 20
+theta <- 0.4
+y_1 <- rbinom(n_1, size = 1, prob = theta)
+y_1hat <- mean(y_1)
+y_1hat
+```
+
+Sample size 100 is closer to the real value $\theta = 0.4$ since the sample size is larger. If we remove the set seed of 123 on the sample sizes n = 100 and n = 20 and we run the code repeatedly over a set number of times, we see that the sample size n = 100 is a better approximation of the the real value of $\theta$ than the sample size n = 20. This is because the larger the sample size, the closer the maximum likelihood estimate will be to the true value of $\theta$.
+
+Finally we calculate $P(\theta > 0.45)$ and find a 99% lower and upper bound for $\theta$ using qbeta. With qbeta we are able to create intervals that $\theta$ will lie in with high probability.
+
+```{r}
+pbeta(0.45, a_n, b_n, lower.tail = TRUE)
+qbeta(c(0.005, 0.995), a_n, b_n)
+```
+The $P(\theta>0.45)=0.8389044$. The lower bound for $\theta$ is 0.2822088 at 0.5% and the upper bound is 0.5288697 at 99.5%.
+
+
+### Question 2 (4 marks)
+
+Followed by Question 1 and using the $a_n$ and $b_n$ from Question 1, conduct the same Monto Carlo simulation (sample size 5000) analysis as I have done for the posterior distribution of $\theta$. (a) Visualize the distribution of the sample of simulated observations. Compare the histogram/approximate density using Monto Carlo simulation you have plotted and the exact density curve you have already plotted using dbeta from Question 1 (b). (b) Calculate and sample mean. Estimate probability $P (\theta > 0.45)$ using empirical sample and compare this to the results using pbeta in Question 1 (d). (c) Find a 99% lower and upper bound for $\theta$ using the Monte Carlo simulation. Compare the results with the results you have obtained in Question 1 (d).
+
+Solution:
+
+To plot the Monto Carlo simulation, we can use base graphics again, but first we will need to simulate a random sample of 5000 observations from a Beta distribution with parameters $a_n$ and $b_n$. To do this we can use rbeta. 
+
+```{r}
+set.seed(123)
+sim_theta <- rbeta(5000, a_n, b_n)
+# Histogram of the simulated data
+hist(sim_theta, freq=FALSE, main = "Histogram of Monto Carlo Samples", xlab = expression(theta), ylab = "Posterior Density", sub = "Simulated Data Result", col = "pink")
+lines(density(sim_theta), col="blue")
+```
+
+We can compare this new plot with the previous plot from Question 1 (b). 
+
+```{r}
+par(mfrow=c(1,2))
+plot(x, f_y1, ylim = range(f_y1, f_y2), type = "l", main ="Posterior and Prior Comparison", sub = "Simulated Data Result", ylab = "Probability Density", xlab = expression(theta))
+lines(x, f_y2, lwd = 2, col = 2)
+abline(v = theta, col = 3)
+text(c(0.8, 0.3, theta), c(1.2, 3.5, 2), labels = c("p(theta)", "p(theta | y)", "true value"), col = 1:3) 
+hist(sim_theta, freq=FALSE, main = "Histogram of Monto Carlo Samples", xlab = expression(theta), ylab = "Posterior Density", xlim = c(0, 1), sub = "Simulated Data Result")
+lines(density(sim_theta))
+```
+
+Comparing the density curve plotted in Question 1 (b) and the histogram using Monto Carlo simulation, we can see a similar trend in the $p(\theta|y)$ curve. When scaling both graphs to the same intervals, we can see that the density curves are nearly identical. This resemblance makes sense since the Monto Carlo simulation uses the $a_n$ and $b_n$ parameters that were used to find the expected value of $\theta$. Thus, there is a relationship between the $a_n$ and $b_n$ parameters and the true value of $\theta$.
+
+Using the simulated random beta distribution of sample 5000, we can estimate the expected value of $\theta$ by finding the sample mean. To estimate the $P(\theta>0.45)$, we will use empirical sample and examine the similarities of it to the previous results found in Question 1 (d) using pbeta. 
+
+```{r}
+mean(sim_theta)
+# probability
+1 - mean(sim_theta > 0.45)
+```
+
+The sample mean is 0.4023488 and the $P(\theta>0.45)$ using empirical sample is 0.8388. Comparing this to the results from Question 1, the empirical sample is slightly smaller than the results using pbeta.
+
+To find a 99% lower and upper bound for $\theta$, we can use quantile instead of qbeta in Question 1 (d) and compare the two.
+
+```{r}
+quantile(sim_theta, c(0.005, 0.995))
+```
+
+The lower bound is 0.2799063 at 0.5% and the upper bound is 0.5279673 at 99.5%. Comparing this to the bounds found in Question 1 (d), we can see that the bounds by qbeta are slightly larger than those found by quantile.
+
+
