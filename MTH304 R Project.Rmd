@@ -1,6 +1,6 @@
 ---
 title: "MTH304 R Project"
-author: "Niruthieka Velalakan 500955329"
+author: "Niruthieka Velalakan"
 date: "25/11/2020"
 output:
   pdf_document: default
